@@ -11,8 +11,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   
-  // null means "All Expirations"
-  const [selectedExpiry, setSelectedExpiry] = useState<number | null>(null);
+  // Filter Modes: 'all', '0dte', '1w', '1m', '3m'
+  const [filterMode, setFilterMode] = useState<string>('all');
 
   const loadData = async () => {
     setLoading(true);
@@ -28,32 +28,37 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const uniqueExpirations = useMemo(() => {
-    const expSet = new Set<number>();
-    options.forEach(o => expSet.add(o.expiry));
-    return Array.from(expSet).sort((a, b) => a - b);
-  }, [options]);
-
-  // Set default to closest expiry (0DTE) on initial load
-  useEffect(() => {
-    if (uniqueExpirations.length > 0 && selectedExpiry === null) {
-      setSelectedExpiry(uniqueExpirations[0]);
-    }
-  }, [uniqueExpirations, selectedExpiry]);
+  // Remove default 0DTE selection to show All by default, or default to 'all'
+  // Let user click exactly what they want
 
   const filteredOptions = useMemo(() => {
-    if (selectedExpiry === null) return options;
-    return options.filter(o => o.expiry === selectedExpiry);
-  }, [options, selectedExpiry]);
+    if (filterMode === 'all') return options;
 
-  const formatTabLabel = (ts: number, index: number) => {
-    if (index === 0) return '0DTE (Today)';
-    if (index === 1) return '1DTE (Tomorrow)';
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
     
-    const d = new Date(ts);
-    // e.g. Sep 29
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+    const uniqueExpirations = Array.from(new Set(options.map(o => o.expiry))).sort((a, b) => a - b);
+    const nearestExpiry = uniqueExpirations.length > 0 ? uniqueExpirations[0] : 0;
+
+    return options.filter(o => {
+      const dte = (o.expiry - now) / dayMs;
+      
+      switch (filterMode) {
+        case '0dte':
+          return o.expiry === nearestExpiry; // Strictly the closest expiration
+        case '1w':
+          return dte <= 7;
+        case '1m':
+          return dte <= 30;
+        case '3m':
+          return dte <= 90;
+        default:
+          return true;
+      }
+    });
+  }, [options, filterMode]);
+
+  // We don't need formatTabLabel anymore
 
   return (
     <div className="app-container">
@@ -90,22 +95,37 @@ function App() {
               <div className="panel">
                 <div className="panel-header" style={{ marginBottom: 12 }}>
                   <h2 className="panel-title">Net GEX Profile</h2>
-                  <div className="filter-scroll" style={{ maxWidth: '60%' }}>
+                  <div className="filter-scroll" style={{ maxWidth: '100%' }}>
                     <div 
-                      className={`filter-tab ${selectedExpiry === null ? 'active' : ''}`}
-                      onClick={() => setSelectedExpiry(null)}
+                      className={`filter-tab ${filterMode === 'all' ? 'active' : ''}`}
+                      onClick={() => setFilterMode('all')}
                     >
                       All Exp
                     </div>
-                    {uniqueExpirations.map((exp, idx) => (
-                      <div 
-                        key={exp}
-                        className={`filter-tab ${selectedExpiry === exp ? 'active' : ''}`}
-                        onClick={() => setSelectedExpiry(exp)}
-                      >
-                        {formatTabLabel(exp, idx)}
-                      </div>
-                    ))}
+                    <div 
+                      className={`filter-tab ${filterMode === '0dte' ? 'active' : ''}`}
+                      onClick={() => setFilterMode('0dte')}
+                    >
+                      0DTE
+                    </div>
+                    <div 
+                      className={`filter-tab ${filterMode === '1w' ? 'active' : ''}`}
+                      onClick={() => setFilterMode('1w')}
+                    >
+                      &le; 1 Week
+                    </div>
+                    <div 
+                      className={`filter-tab ${filterMode === '1m' ? 'active' : ''}`}
+                      onClick={() => setFilterMode('1m')}
+                    >
+                      &le; 1 Month
+                    </div>
+                    <div 
+                      className={`filter-tab ${filterMode === '3m' ? 'active' : ''}`}
+                      onClick={() => setFilterMode('3m')}
+                    >
+                      &le; 3 Months
+                    </div>
                   </div>
                 </div>
                 <GexChart options={filteredOptions} />
