@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { fetchOptionsData, type OptionData } from '../services/deribit';
+import { fetchBinanceOptionsData } from '../services/binanceOptions';
 import { MarketSummary } from './MarketSummary';
 import { GexChart } from './GexChart';
 import { OptionsTable } from './OptionsTable';
@@ -7,15 +8,22 @@ import { GexHeatmap } from './GexHeatmap';
 import { RefreshCcw } from 'lucide-react';
 
 export const GexDashboard = () => {
-  const [options, setOptions] = useState<OptionData[]>([]);
+  const [deribitOptions, setDeribitOptions] = useState<OptionData[]>([]);
+  const [binanceOptions, setBinanceOptions] = useState<OptionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [filterMode, setFilterMode] = useState<string>('all');
+  const [dataSource, setDataSource] = useState<string>('all'); // 'all' | 'deribit' | 'binance'
 
   const loadData = async () => {
     setLoading(true);
-    const data = await fetchOptionsData();
-    setOptions(data);
+    // Fetch from both sources in parallel
+    const [deribitData, binanceData] = await Promise.all([
+      fetchOptionsData(),
+      fetchBinanceOptionsData()
+    ]);
+    setDeribitOptions(deribitData);
+    setBinanceOptions(binanceData);
     setLastUpdate(new Date());
     setLoading(false);
   };
@@ -25,6 +33,16 @@ export const GexDashboard = () => {
     const interval = setInterval(loadData, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  const options = useMemo(() => {
+    if (dataSource === 'deribit') return deribitOptions;
+    if (dataSource === 'binance') return binanceOptions;
+    
+    // Aggregator: Merge Deribit and Binance
+    // We can just concat them! The indicators and charts will naturally sum up the GEX
+    // because they group by Strike or Expiry.
+    return [...deribitOptions, ...binanceOptions];
+  }, [deribitOptions, binanceOptions, dataSource]);
 
   const filteredOptions = useMemo(() => {
     if (filterMode === 'all') return options;
@@ -51,11 +69,20 @@ export const GexDashboard = () => {
   return (
     <div className="flex-col gap-6 w-full">
       <div className="flex justify-between items-center" style={{ marginBottom: '-8px' }}>
-        <h2 className="panel-title" style={{ color: 'var(--text-secondary)' }}>Options Flow (Deribit)</h2>
-        <button className="btn" onClick={loadData} disabled={loading}>
-          <RefreshCcw size={16} className={loading ? 'spinner' : ''} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Refresh'}
-        </button>
+        <h2 className="panel-title" style={{ color: 'var(--text-secondary)' }}>Market Maker GEX Profile</h2>
+        
+        <div className="flex items-center gap-4">
+          <div className="filter-scroll" style={{ padding: 4, background: 'var(--bg-panel)', borderRadius: 8 }}>
+            <div className={`filter-tab ${dataSource === 'all' ? 'active' : ''}`} onClick={() => setDataSource('all')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Aggregated (All)</div>
+            <div className={`filter-tab ${dataSource === 'deribit' ? 'active' : ''}`} onClick={() => setDataSource('deribit')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Deribit</div>
+            <div className={`filter-tab ${dataSource === 'binance' ? 'active' : ''}`} onClick={() => setDataSource('binance')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Binance</div>
+          </div>
+          
+          <button className="btn" onClick={loadData} disabled={loading}>
+            <RefreshCcw size={16} className={loading ? 'spinner' : ''} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {loading && options.length === 0 ? (
