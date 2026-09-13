@@ -4,12 +4,15 @@ import { fetchOptionsData, type OptionData } from './services/deribit';
 import { MarketSummary } from './components/MarketSummary';
 import { GexChart } from './components/GexChart';
 import { OptionsTable } from './components/OptionsTable';
+import { GexHeatmap } from './components/GexHeatmap';
 
 function App() {
   const [options, setOptions] = useState<OptionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [filter0DTE, setFilter0DTE] = useState(true);
+  
+  // null means "All Expirations"
+  const [selectedExpiry, setSelectedExpiry] = useState<number | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -21,24 +24,36 @@ function App() {
 
   useEffect(() => {
     loadData();
-    // Refresh every minute
     const interval = setInterval(loadData, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const filteredOptions = useMemo(() => {
-    if (!filter0DTE) return options;
+  const uniqueExpirations = useMemo(() => {
+    const expSet = new Set<number>();
+    options.forEach(o => expSet.add(o.expiry));
+    return Array.from(expSet).sort((a, b) => a - b);
+  }, [options]);
 
-    // Find the nearest expiry date
-    if (options.length === 0) return [];
+  // Set default to closest expiry (0DTE) on initial load
+  useEffect(() => {
+    if (uniqueExpirations.length > 0 && selectedExpiry === null) {
+      setSelectedExpiry(uniqueExpirations[0]);
+    }
+  }, [uniqueExpirations, selectedExpiry]);
+
+  const filteredOptions = useMemo(() => {
+    if (selectedExpiry === null) return options;
+    return options.filter(o => o.expiry === selectedExpiry);
+  }, [options, selectedExpiry]);
+
+  const formatTabLabel = (ts: number, index: number) => {
+    if (index === 0) return '0DTE (Today)';
+    if (index === 1) return '1DTE (Tomorrow)';
     
-    // Sort by expiry
-    const sorted = [...options].sort((a, b) => a.expiry - b.expiry);
-    const nearestExpiry = sorted[0].expiry;
-    
-    // Group options that have this exact nearest expiry (which is the 0DTE or closest)
-    return options.filter(o => o.expiry === nearestExpiry);
-  }, [options, filter0DTE]);
+    const d = new Date(ts);
+    // e.g. Sep 29
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className="app-container">
@@ -49,23 +64,6 @@ function App() {
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex bg-panel rounded" style={{ padding: 4, borderRadius: 'var(--radius-sm)' }}>
-            <button 
-              className={`btn ${filter0DTE ? 'active' : ''}`} 
-              onClick={() => setFilter0DTE(true)}
-              style={{ border: 'none', background: filter0DTE ? 'rgba(0, 210, 255, 0.1)' : 'transparent' }}
-            >
-              0DTE
-            </button>
-            <button 
-              className={`btn ${!filter0DTE ? 'active' : ''}`} 
-              onClick={() => setFilter0DTE(false)}
-              style={{ border: 'none', background: !filter0DTE ? 'rgba(0, 210, 255, 0.1)' : 'transparent' }}
-            >
-              All Exp
-            </button>
-          </div>
-          
           <button className="btn" onClick={loadData} disabled={loading}>
             <RefreshCcw size={16} className={loading ? 'spinner' : ''} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             {lastUpdate ? lastUpdate.toLocaleTimeString() : 'Refresh'}
@@ -76,17 +74,52 @@ function App() {
       {loading && options.length === 0 ? (
         <div className="loader-container">
           <div className="spinner"></div>
-          <div>Loading market data from Deribit...</div>
+          <div>Loading advanced market data from Deribit...</div>
         </div>
       ) : (
         <>
-          <MarketSummary options={filteredOptions} />
-          
-          <div className="grid-summary" style={{ gridTemplateColumns: '1fr' }}>
-            <GexChart options={filteredOptions} />
+          {/* Market Summary Panel */}
+          <div className="panel" style={{ padding: 16 }}>
+            <MarketSummary options={filteredOptions} />
           </div>
 
-          <OptionsTable options={filteredOptions} />
+          <div className="dashboard-grid">
+            {/* Left Column (Charts & Tables) */}
+            <div className="flex-col gap-6">
+              
+              <div className="panel">
+                <div className="panel-header" style={{ marginBottom: 12 }}>
+                  <h2 className="panel-title">Net GEX Profile</h2>
+                  <div className="filter-scroll" style={{ maxWidth: '60%' }}>
+                    <div 
+                      className={`filter-tab ${selectedExpiry === null ? 'active' : ''}`}
+                      onClick={() => setSelectedExpiry(null)}
+                    >
+                      All Exp
+                    </div>
+                    {uniqueExpirations.map((exp, idx) => (
+                      <div 
+                        key={exp}
+                        className={`filter-tab ${selectedExpiry === exp ? 'active' : ''}`}
+                        onClick={() => setSelectedExpiry(exp)}
+                      >
+                        {formatTabLabel(exp, idx)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <GexChart options={filteredOptions} />
+              </div>
+
+              <OptionsTable options={filteredOptions} />
+            </div>
+
+            {/* Right Column (Heatmap) */}
+            <div className="flex-col gap-6">
+              {/* Heatmap gets ALL options regardless of selected tab to show full picture */}
+              <GexHeatmap options={options} />
+            </div>
+          </div>
         </>
       )}
     </div>

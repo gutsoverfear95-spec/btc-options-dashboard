@@ -77,11 +77,7 @@ export const GexChart: React.FC<Props> = ({ options }) => {
   const spotPrice = options.length > 0 ? options[0].underlying_price : 0;
 
   return (
-    <div className="panel">
-      <div className="panel-header">
-        <h2 className="panel-title">Net Gamma Exposure (GEX) Profile</h2>
-      </div>
-      <div style={{ height: 400, width: '100%' }}>
+    <div style={{ height: 400, width: '100%' }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -115,7 +111,6 @@ export const GexChart: React.FC<Props> = ({ options }) => {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
     </div>
   );
 };

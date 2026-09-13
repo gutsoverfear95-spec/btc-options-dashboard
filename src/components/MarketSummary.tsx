@@ -6,83 +6,124 @@ interface Props {
   options: OptionData[];
 }
 
-export const MarketSummary: React.FC<Props> = ({ options }) => {
+export const MarketSummary = ({ options }: Props) => {
   const stats = useMemo(() => {
     if (options.length === 0) return null;
 
-    let totalCallOI = 0;
-    let totalPutOI = 0;
-    let totalCallVol = 0;
-    let totalPutVol = 0;
+    let totalCallGex = 0;
+    let totalPutGex = 0;
     
+    // For Walls
+    let maxCallGex = 0;
+    let callWallStrike = 0;
+    let maxPutGex = 0; // most negative
+    let putWallStrike = 0;
+    
+    // Group GEX by strike to find walls and flip gamma accurately
+    const strikeMap = new Map<number, number>();
+    
+    const spot = options[0]?.underlying_price || 0;
+
     options.forEach(opt => {
       if (opt.type === 'call') {
-        totalCallOI += opt.open_interest;
-        totalCallVol += opt.volume;
+        totalCallGex += opt.gex;
+        if (opt.gex > maxCallGex) {
+          maxCallGex = opt.gex;
+          callWallStrike = opt.strike;
+        }
       } else {
-        totalPutOI += opt.open_interest;
-        totalPutVol += opt.volume;
+        totalPutGex += opt.gex;
+        if (opt.gex < maxPutGex) {
+          maxPutGex = opt.gex;
+          putWallStrike = opt.strike;
+        }
       }
+      
+      const currentNet = strikeMap.get(opt.strike) || 0;
+      strikeMap.set(opt.strike, currentNet + opt.gex);
     });
 
-    const spot = options[0]?.underlying_price || 0;
-    const pcr = totalPutOI / totalCallOI;
+    const netGex = totalCallGex + totalPutGex;
+    const absoluteGex = totalCallGex + Math.abs(totalPutGex);
+    
+    // Find Zero Gamma (Flip Gamma) - Simplified: closest strike to spot where Net GEX is near 0 or flips sign relative to cumulative
+    // A robust simple method for dashboards is just finding the strike where Cumulative GEX crosses 0.
+    const sortedStrikes = Array.from(strikeMap.entries()).sort((a, b) => a[0] - b[0]);
+    let cumulativeGex = 0;
+    let zeroGammaStrike = spot; // fallback
+    let foundFlip = false;
+    
+    for (let i = 0; i < sortedStrikes.length; i++) {
+      const [strike, net] = sortedStrikes[i];
+      const prevCumulative = cumulativeGex;
+      cumulativeGex += net;
+      
+      // If we crossed 0
+      if ((prevCumulative < 0 && cumulativeGex >= 0) || (prevCumulative > 0 && cumulativeGex <= 0)) {
+        // If it's the first time crossing or it's closer to spot than a previous crossing
+        if (!foundFlip || Math.abs(strike - spot) < Math.abs(zeroGammaStrike - spot)) {
+          zeroGammaStrike = strike;
+          foundFlip = true;
+        }
+      }
+    }
 
     return {
       spot,
-      totalCallOI,
-      totalPutOI,
-      totalCallVol,
-      totalPutVol,
-      pcr,
-      totalVol: totalCallVol + totalPutVol,
-      totalOI: totalCallOI + totalPutOI
+      netGex,
+      totalCallGex,
+      totalPutGex,
+      absoluteGex,
+      callWallStrike,
+      putWallStrike,
+      zeroGammaStrike: foundFlip ? zeroGammaStrike : 0
     };
   }, [options]);
 
   if (!stats) return null;
 
   return (
-    <div className="grid-summary">
-      <div className="panel stat-box">
-        <span className="stat-label">BTC Spot Price</span>
-        <span className="stat-value text-blue">{formatCurrency(stats.spot)}</span>
-      </div>
+    <div className="grid-summary" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
       
-      <div className="panel stat-box">
-        <span className="stat-label">Put/Call Ratio (OI)</span>
-        <span className={`stat-value ${stats.pcr > 1 ? 'text-put' : 'text-call'}`}>
-          {stats.pcr.toFixed(2)}
+      <div className="indicator-box indicator-neutral">
+        <span className="indicator-label">Spot Price</span>
+        <span className="indicator-value text-blue">{formatCurrency(stats.spot)}</span>
+      </div>
+
+      <div className="indicator-box indicator-warning">
+        <span className="indicator-label">Zero Gamma</span>
+        <span className="indicator-value text-warning">
+          {stats.zeroGammaStrike ? formatCurrency(stats.zeroGammaStrike, 0) : 'N/A'}
         </span>
       </div>
 
-      <div className="panel stat-box">
-        <span className="stat-label">Total Open Interest (BTC)</span>
-        <div className="flex justify-between items-center mt-2">
-          <div className="flex-col">
-            <span className="text-xs text-muted">Calls</span>
-            <span className="text-sm font-semibold text-call">{formatCompact(stats.totalCallOI)}</span>
-          </div>
-          <div className="flex-col" style={{ textAlign: 'right' }}>
-            <span className="text-xs text-muted">Puts</span>
-            <span className="text-sm font-semibold text-put">{formatCompact(stats.totalPutOI)}</span>
-          </div>
-        </div>
+      <div className="indicator-box indicator-call">
+        <span className="indicator-label">Call Wall</span>
+        <span className="indicator-value text-call">{formatCurrency(stats.callWallStrike, 0)}</span>
       </div>
 
-      <div className="panel stat-box">
-        <span className="stat-label">24h Volume (BTC)</span>
-        <div className="flex justify-between items-center mt-2">
-          <div className="flex-col">
-            <span className="text-xs text-muted">Calls</span>
-            <span className="text-sm font-semibold text-call">{formatCompact(stats.totalCallVol)}</span>
-          </div>
-          <div className="flex-col" style={{ textAlign: 'right' }}>
-            <span className="text-xs text-muted">Puts</span>
-            <span className="text-sm font-semibold text-put">{formatCompact(stats.totalPutVol)}</span>
-          </div>
-        </div>
+      <div className="indicator-box indicator-put">
+        <span className="indicator-label">Put Wall</span>
+        <span className="indicator-value text-put">{formatCurrency(stats.putWallStrike, 0)}</span>
       </div>
+
+      <div className="indicator-box" style={{ '--indicator-color': stats.netGex > 0 ? 'var(--accent-call)' : 'var(--accent-put)' } as any}>
+        <span className="indicator-label">Net GEX</span>
+        <span className="indicator-value" style={{ color: stats.netGex > 0 ? 'var(--accent-call)' : 'var(--accent-put)' }}>
+          {formatCompact(stats.netGex)}
+        </span>
+      </div>
+
+      <div className="indicator-box indicator-call">
+        <span className="indicator-label">Total Call GEX</span>
+        <span className="indicator-value text-call">{formatCompact(stats.totalCallGex)}</span>
+      </div>
+
+      <div className="indicator-box indicator-put">
+        <span className="indicator-label">Total Put GEX</span>
+        <span className="indicator-value text-put">{formatCompact(stats.totalPutGex)}</span>
+      </div>
+
     </div>
   );
 };
