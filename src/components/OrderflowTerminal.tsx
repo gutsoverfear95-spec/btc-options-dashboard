@@ -61,9 +61,12 @@ export const OrderflowTerminal = () => {
     setCandlestickSeries(candleSeries);
     setVolumeSeries(volSeries);
 
+    let cancelled = false;
+
     const initData = async () => {
       try {
         const histData = await fetchHistoricalKlines('BTCUSDT', '1m', 100);
+        if (cancelled) return;
         
         // Ensure data is sorted by time ascending and unique
         const uniqueData = Array.from(new Map(histData.map((item: any) => [item.time, item])).values())
@@ -101,6 +104,7 @@ export const OrderflowTerminal = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('resize', handleResize);
       newChart.remove();
     };
@@ -120,8 +124,15 @@ export const OrderflowTerminal = () => {
           low: candle.low,
           close: candle.close,
         });
+        volumeSeries.update({
+          time: candle.time as any,
+          value: candle.volume,
+          color: candle.close >= candle.open
+            ? 'rgba(0, 230, 118, 0.4)'
+            : 'rgba(255, 23, 68, 0.4)',
+        });
         setPrice(candle.close);
-      } catch (err) {
+      } catch {
         // Ignore out of order or duplicate time errors from lightweight-charts
       }
     });

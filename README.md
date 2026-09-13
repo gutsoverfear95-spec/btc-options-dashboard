@@ -1,32 +1,40 @@
-# React + TypeScript + Vite
+# BTC Options Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite dashboard for BTC options GEX and Binance futures orderflow.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Other useful commands:
+
+```bash
+npm run lint
+npm run build
+npm run preview
+```
+
+## Features
+
+- Deribit and Binance BTC options data.
+- GEX profile grouped by strike.
+- Strike/expiry heatmap.
+- Options chain with source and expiry labels.
+- Binance 1-minute candlestick, volume and liquidation feed.
+- Automatic refresh every 60 seconds.
+
+## Data and deployment
+
+Browser requests use same-origin routes:
+
+- `/api/binance-options/*` proxies Binance Options API.
+- `/api/binance-spot/*` proxies Binance Spot API.
+
+The local routes are configured in `vite.config.ts`. Netlify deployments use the matching rules in `public/_redirects`; other hosting providers need equivalent server-side rewrites or serverless functions.
+
+GEX is normalized as dollar exposure for a 1% underlying move. Binance data currently assumes a 1 BTC contract, so the exchange contract multiplier should be revalidated if Binance changes its product specification.
+
+This project is an analytics tool, not financial advice. Validate calculations against exchange data before using them for trading decisions.

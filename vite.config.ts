@@ -10,6 +10,11 @@ export default defineConfig({
         target: 'https://eapi.binance.com/eapi/v1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/binance-options/, '')
+      },
+      '/api/binance-spot': {
+        target: 'https://api.binance.com/api/v3',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/binance-spot/, '')
       }
     }
   }

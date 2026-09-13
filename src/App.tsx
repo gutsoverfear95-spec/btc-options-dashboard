@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Activity, LayoutDashboard, CandlestickChart } from 'lucide-react';
-import { GexDashboard } from './components/GexDashboard';
-import { OrderflowTerminal } from './components/OrderflowTerminal';
+
+const GexDashboard = lazy(() =>
+  import('./components/GexDashboard').then(module => ({ default: module.GexDashboard })),
+);
+const OrderflowTerminal = lazy(() =>
+  import('./components/OrderflowTerminal').then(module => ({ default: module.OrderflowTerminal })),
+);
 
 function App() {
   const [activeTab, setActiveTab] = useState<'gex' | 'orderflow'>('gex');
@@ -39,8 +44,10 @@ function App() {
 
       {/* Main Content Area */}
       <main style={{ flex: 1, minWidth: 0 }}>
-        {activeTab === 'gex' && <GexDashboard />}
-        {activeTab === 'orderflow' && <OrderflowTerminal />}
+        <Suspense fallback={<div className="loader-container">Loading dashboard...</div>}>
+          {activeTab === 'gex' && <GexDashboard />}
+          {activeTab === 'orderflow' && <OrderflowTerminal />}
+        </Suspense>
       </main>
 
     </div>

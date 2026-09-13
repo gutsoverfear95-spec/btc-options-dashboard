@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchOptionsData, type OptionData } from '../services/deribit';
 import { fetchBinanceOptionsData } from '../services/binanceOptions';
 import { MarketSummary } from './MarketSummary';
@@ -14,25 +14,48 @@ export const GexDashboard = () => {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [filterMode, setFilterMode] = useState<string>('all');
   const [dataSource, setDataSource] = useState<string>('all'); // 'all' | 'deribit' | 'binance'
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const requestIdRef = useRef(0);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
-    // Fetch from both sources in parallel
-    const [deribitData, binanceData] = await Promise.all([
+    const results = await Promise.allSettled([
       fetchOptionsData(),
-      fetchBinanceOptionsData()
+      fetchBinanceOptionsData(),
     ]);
-    setDeribitOptions(deribitData);
-    setBinanceOptions(binanceData);
+
+    if (requestId !== requestIdRef.current) return;
+
+    const [deribitResult, binanceResult] = results;
+    const errors: string[] = [];
+    const nextDeribitOptions = deribitResult.status === 'fulfilled'
+      ? deribitResult.value
+      : (errors.push(`Deribit: ${getErrorMessage(deribitResult.reason)}`), []);
+    const nextBinanceOptions = binanceResult.status === 'fulfilled'
+      ? binanceResult.value
+      : (errors.push(`Binance: ${getErrorMessage(binanceResult.reason)}`), []);
+
+    setDeribitOptions(nextDeribitOptions);
+    setBinanceOptions(nextBinanceOptions);
+    setDataError(errors.length > 0 ? errors.join(' | ') : null);
     setLastUpdate(new Date());
+    setNow(Date.now());
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    loadData();
+    const initialLoad = setTimeout(() => {
+      void loadData();
+    }, 0);
     const interval = setInterval(loadData, 60000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearTimeout(initialLoad);
+      clearInterval(interval);
+      requestIdRef.current += 1;
+    };
+  }, [loadData]);
 
   const options = useMemo(() => {
     if (dataSource === 'deribit') return deribitOptions;
@@ -44,27 +67,34 @@ export const GexDashboard = () => {
     return [...deribitOptions, ...binanceOptions];
   }, [deribitOptions, binanceOptions, dataSource]);
 
+  const activeOptions = useMemo(
+    () => options.filter(option => option.expiry >= now),
+    [options, now],
+  );
+
   const filteredOptions = useMemo(() => {
-    if (filterMode === 'all') return options;
-
-    const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
-    
-    const uniqueExpirations = Array.from(new Set(options.map(o => o.expiry))).sort((a, b) => a - b);
-    const nearestExpiry = uniqueExpirations.length > 0 ? uniqueExpirations[0] : 0;
+    if (filterMode === 'all') return activeOptions;
 
-    return options.filter(o => {
+    const nearestExpiry = activeOptions
+      .map(option => option.expiry)
+      .sort((a, b) => a - b)[0];
+    const nearestExpiryDate = nearestExpiry
+      ? new Date(nearestExpiry).toISOString().slice(0, 10)
+      : '';
+
+    return activeOptions.filter(o => {
       const dte = (o.expiry - now) / dayMs;
       
       switch (filterMode) {
-        case '0dte': return o.expiry === nearestExpiry;
+        case '0dte': return new Date(o.expiry).toISOString().slice(0, 10) === nearestExpiryDate;
         case '1w': return dte <= 7;
         case '1m': return dte <= 30;
         case '3m': return dte <= 90;
         default: return true;
       }
     });
-  }, [options, filterMode]);
+  }, [activeOptions, filterMode, now]);
 
   return (
     <div className="flex-col gap-6 w-full">
@@ -73,9 +103,9 @@ export const GexDashboard = () => {
         
         <div className="flex items-center gap-4">
           <div className="filter-scroll" style={{ padding: 4, background: 'var(--bg-panel)', borderRadius: 8 }}>
-            <div className={`filter-tab ${dataSource === 'all' ? 'active' : ''}`} onClick={() => setDataSource('all')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Aggregated (All)</div>
-            <div className={`filter-tab ${dataSource === 'deribit' ? 'active' : ''}`} onClick={() => setDataSource('deribit')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Deribit</div>
-            <div className={`filter-tab ${dataSource === 'binance' ? 'active' : ''}`} onClick={() => setDataSource('binance')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Binance</div>
+            <button type="button" className={`filter-tab ${dataSource === 'all' ? 'active' : ''}`} onClick={() => setDataSource('all')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Aggregated (All)</button>
+            <button type="button" className={`filter-tab ${dataSource === 'deribit' ? 'active' : ''}`} onClick={() => setDataSource('deribit')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Deribit</button>
+            <button type="button" className={`filter-tab ${dataSource === 'binance' ? 'active' : ''}`} onClick={() => setDataSource('binance')} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>Binance</button>
           </div>
           
           <button className="btn" onClick={loadData} disabled={loading}>
@@ -85,10 +115,20 @@ export const GexDashboard = () => {
         </div>
       </div>
 
+      {dataError && (
+        <div className="panel" style={{ color: 'var(--accent-put)', padding: 12 }}>
+          Data refresh warning: {dataError}
+        </div>
+      )}
+
       {loading && options.length === 0 ? (
         <div className="loader-container">
           <div className="spinner"></div>
           <div>Loading advanced options data...</div>
+        </div>
+      ) : options.length === 0 ? (
+        <div className="panel" style={{ padding: 16 }}>
+          No active options data is available.
         </div>
       ) : (
         <>
@@ -102,11 +142,11 @@ export const GexDashboard = () => {
                 <div className="panel-header" style={{ marginBottom: 12 }}>
                   <h2 className="panel-title">Net GEX Profile</h2>
                   <div className="filter-scroll" style={{ maxWidth: '100%' }}>
-                    <div className={`filter-tab ${filterMode === 'all' ? 'active' : ''}`} onClick={() => setFilterMode('all')}>All Exp</div>
-                    <div className={`filter-tab ${filterMode === '0dte' ? 'active' : ''}`} onClick={() => setFilterMode('0dte')}>0DTE</div>
-                    <div className={`filter-tab ${filterMode === '1w' ? 'active' : ''}`} onClick={() => setFilterMode('1w')}>&le; 1 Week</div>
-                    <div className={`filter-tab ${filterMode === '1m' ? 'active' : ''}`} onClick={() => setFilterMode('1m')}>&le; 1 Month</div>
-                    <div className={`filter-tab ${filterMode === '3m' ? 'active' : ''}`} onClick={() => setFilterMode('3m')}>&le; 3 Months</div>
+                    <button type="button" className={`filter-tab ${filterMode === 'all' ? 'active' : ''}`} onClick={() => setFilterMode('all')}>All Exp</button>
+                    <button type="button" className={`filter-tab ${filterMode === '0dte' ? 'active' : ''}`} onClick={() => setFilterMode('0dte')}>0DTE</button>
+                    <button type="button" className={`filter-tab ${filterMode === '1w' ? 'active' : ''}`} onClick={() => setFilterMode('1w')}>&le; 1 Week</button>
+                    <button type="button" className={`filter-tab ${filterMode === '1m' ? 'active' : ''}`} onClick={() => setFilterMode('1m')}>&le; 1 Month</button>
+                    <button type="button" className={`filter-tab ${filterMode === '3m' ? 'active' : ''}`} onClick={() => setFilterMode('3m')}>&le; 3 Months</button>
                   </div>
                 </div>
                 <GexChart options={filteredOptions} />
@@ -114,11 +154,15 @@ export const GexDashboard = () => {
               <OptionsTable options={filteredOptions} />
             </div>
             <div className="flex-col gap-6">
-              <GexHeatmap options={options} />
+              <GexHeatmap options={activeOptions} />
             </div>
           </div>
         </>
       )}
     </div>
   );
+};
+
+const getErrorMessage = (error: unknown) => {
+  return error instanceof Error ? error.message : 'Unknown request error';
 };

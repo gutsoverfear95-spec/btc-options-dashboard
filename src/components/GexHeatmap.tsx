@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { OptionData } from '../services/deribit';
+import { getReferenceSpot } from '../services/optionsMath';
 import { formatCurrency } from '../utils/formatters';
 
 interface Props {
@@ -10,7 +11,8 @@ export const GexHeatmap = ({ options }: Props) => {
   const heatmapData = useMemo(() => {
     if (options.length === 0) return { strikes: [], expirations: [], matrix: new Map() };
 
-    const spot = options[0].underlying_price;
+    const spot = getReferenceSpot(options);
+    if (spot <= 0) return { strikes: [], expirations: [], matrix: new Map(), maxAbsGex: 0 };
     // Filter strikes within 20% of spot
     const validOptions = options.filter(o => Math.abs(o.strike - spot) / spot < 0.2);
 
@@ -33,7 +35,7 @@ export const GexHeatmap = ({ options }: Props) => {
     validOptions.forEach(o => {
       const key = `${o.strike}_${o.expiry}`;
       const current = matrix.get(key) || 0;
-      matrix.set(key, current + (o.type === 'call' ? o.gex : o.gex)); // Wait, gex for put is already negative in deribit.ts
+      matrix.set(key, current + o.gex);
     });
 
     // Find max absolute GEX for color scaling

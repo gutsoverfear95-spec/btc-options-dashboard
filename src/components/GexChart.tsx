@@ -11,11 +11,49 @@ import {
   ReferenceLine
 } from 'recharts';
 import type { OptionData } from '../services/deribit';
+import { getReferenceSpot } from '../services/optionsMath';
 import { formatCompact, formatCurrency } from '../utils/formatters';
 
 interface Props {
   options: OptionData[];
 }
+
+interface ChartPoint {
+  strike: number;
+  callGex: number;
+  putGex: number;
+  netGex: number;
+}
+
+const CustomTooltip = ({ active, payload, label }: {
+  active?: boolean;
+  payload?: Array<{ payload: ChartPoint }>;
+  label?: number;
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="custom-tooltip">
+        <div className="custom-tooltip-label">Strike: {formatCurrency(label || 0, 0)}</div>
+        <div className="custom-tooltip-item">
+          <span className="text-call">Call GEX:</span>
+          <span>{formatCompact(data.callGex)}</span>
+        </div>
+        <div className="custom-tooltip-item">
+          <span className="text-put">Put GEX:</span>
+          <span>{formatCompact(data.putGex)}</span>
+        </div>
+        <div className="custom-tooltip-item" style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
+          <span className="text-secondary">Net GEX:</span>
+          <span className={data.netGex > 0 ? 'text-call' : 'text-put'}>
+            {formatCompact(data.netGex)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const GexChart: React.FC<Props> = ({ options }) => {
   const chartData = useMemo(() => {
@@ -48,33 +86,7 @@ export const GexChart: React.FC<Props> = ({ options }) => {
       }));
   }, [options]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="custom-tooltip">
-          <div className="custom-tooltip-label">Strike: {formatCurrency(label, 0)}</div>
-          <div className="custom-tooltip-item">
-            <span className="text-call">Call GEX:</span>
-            <span>{formatCompact(data.callGex)}</span>
-          </div>
-          <div className="custom-tooltip-item">
-            <span className="text-put">Put GEX:</span>
-            <span>{formatCompact(data.putGex)}</span>
-          </div>
-          <div className="custom-tooltip-item" style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 8 }}>
-            <span className="text-secondary">Net GEX:</span>
-            <span className={data.netGex > 0 ? 'text-call' : 'text-put'}>
-              {formatCompact(data.netGex)}
-            </span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const spotPrice = options.length > 0 ? options[0].underlying_price : 0;
+  const spotPrice = getReferenceSpot(options);
 
   return (
     <div style={{ height: 400, width: '100%' }}>

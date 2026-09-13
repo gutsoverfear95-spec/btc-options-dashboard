@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { OptionData } from '../services/deribit';
+import { getReferenceSpot } from '../services/optionsMath';
 import { formatCompact, formatCurrency } from '../utils/formatters';
 
 interface Props {
@@ -14,15 +15,15 @@ export const MarketSummary = ({ options }: Props) => {
     let totalPutGex = 0;
     
     // For Walls
-    let maxCallGex = 0;
+    let maxCallGex = Number.NEGATIVE_INFINITY;
     let callWallStrike = 0;
-    let maxPutGex = 0; // most negative
+    let maxPutGex = Number.POSITIVE_INFINITY; // most negative
     let putWallStrike = 0;
     
     // Group GEX by strike to find walls and flip gamma accurately
     const strikeMap = new Map<number, number>();
     
-    const spot = options[0]?.underlying_price || 0;
+    const spot = getReferenceSpot(options);
 
     options.forEach(opt => {
       if (opt.type === 'call') {
@@ -46,27 +47,25 @@ export const MarketSummary = ({ options }: Props) => {
     const netGex = totalCallGex + totalPutGex;
     const absoluteGex = totalCallGex + Math.abs(totalPutGex);
     
-    // Find Zero Gamma (Flip Gamma) - Simplified: closest strike to spot where Net GEX is near 0 or flips sign relative to cumulative
-    // A robust simple method for dashboards is just finding the strike where Cumulative GEX crosses 0.
+    // Find a zero crossing in the net GEX profile. This is a better approximation
+    // than using cumulative GEX, which changes the meaning of the metric.
     const sortedStrikes = Array.from(strikeMap.entries()).sort((a, b) => a[0] - b[0]);
-    let cumulativeGex = 0;
-    let zeroGammaStrike = spot; // fallback
-    let foundFlip = false;
-    
-    for (let i = 0; i < sortedStrikes.length; i++) {
+    const zeroCrossings: number[] = [];
+
+    for (let i = 1; i < sortedStrikes.length; i++) {
+      const [previousStrike, previousNet] = sortedStrikes[i - 1];
       const [strike, net] = sortedStrikes[i];
-      const prevCumulative = cumulativeGex;
-      cumulativeGex += net;
-      
-      // If we crossed 0
-      if ((prevCumulative < 0 && cumulativeGex >= 0) || (prevCumulative > 0 && cumulativeGex <= 0)) {
-        // If it's the first time crossing or it's closer to spot than a previous crossing
-        if (!foundFlip || Math.abs(strike - spot) < Math.abs(zeroGammaStrike - spot)) {
-          zeroGammaStrike = strike;
-          foundFlip = true;
-        }
+      if (previousNet === 0) zeroCrossings.push(previousStrike);
+      if (previousNet * net < 0) {
+        const interpolation = previousNet / (previousNet - net);
+        zeroCrossings.push(previousStrike + (strike - previousStrike) * interpolation);
       }
     }
+    if (sortedStrikes.at(-1)?.[1] === 0) zeroCrossings.push(sortedStrikes.at(-1)![0]);
+
+    const zeroGammaStrike = zeroCrossings.length > 0
+      ? zeroCrossings.sort((a, b) => Math.abs(a - spot) - Math.abs(b - spot))[0]
+      : 0;
 
     return {
       spot,
@@ -76,7 +75,7 @@ export const MarketSummary = ({ options }: Props) => {
       absoluteGex,
       callWallStrike,
       putWallStrike,
-      zeroGammaStrike: foundFlip ? zeroGammaStrike : 0
+      zeroGammaStrike
     };
   }, [options]);
 
