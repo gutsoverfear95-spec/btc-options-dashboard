@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
 import { BinanceWebSocket, type LiquidationEvent, fetchHistoricalKlines } from '../services/binance';
 import { formatCurrency } from '../utils/formatters';
 
@@ -37,7 +37,7 @@ export const OrderflowTerminal = () => {
       autoSize: true,
     });
 
-    const candleSeries = (newChart as any).addCandlestickSeries({
+    const candleSeries = (newChart as any).addSeries(CandlestickSeries, {
       upColor: '#00e676',
       downColor: '#ff1744',
       borderVisible: false,
@@ -45,7 +45,7 @@ export const OrderflowTerminal = () => {
       wickDownColor: '#ff1744',
     });
 
-    const volSeries = (newChart as any).addHistogramSeries({
+    const volSeries = (newChart as any).addSeries(HistogramSeries, {
       color: '#26a69a',
       priceFormat: { type: 'volume' },
       priceScaleId: '', // overlay
