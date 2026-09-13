@@ -128,11 +128,6 @@ export const OrderflowTerminal = () => {
 
     ws.onLiquidation((liq) => {
       setLiquidations(prev => [liq, ...prev].slice(0, 50)); // keep last 50
-      
-      // Optionally place a marker on the chart for large liquidations
-      if (liq.qty > 1) { // 1 BTC
-        // Marker Logic here if needed
-      }
     });
 
     return () => {
@@ -154,41 +149,41 @@ export const OrderflowTerminal = () => {
         </div>
       </div>
 
-      <div className="dashboard-grid">
+      <div className="flex gap-4 h-[600px] w-full">
         {/* Chart Area */}
-        <div className="panel flex-col" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="panel-header" style={{ padding: '16px 16px 0 16px' }}>
-            <h2 className="panel-title">1m Chart (Real-time)</h2>
+        <div className="flex-1 rounded-xl p-4 flex flex-col" style={{ background: 'var(--bg-panel)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', minWidth: 0 }}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="panel-title text-sm" style={{ margin: 0 }}>1m Chart (Real-time)</h2>
           </div>
-          <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
+          <div ref={chartContainerRef} className="flex-1 w-full" />
         </div>
 
         {/* Liquidation Feed */}
-        <div className="panel flex-col" style={{ height: '500px', overflow: 'hidden' }}>
-          <div className="panel-header">
-            <h2 className="panel-title">Liquidation Feed</h2>
+        <div className="w-[450px] shrink-0 rounded-xl p-4 flex flex-col" style={{ background: 'var(--bg-panel)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="panel-title text-sm" style={{ margin: 0 }}>Liquidation Feed</h2>
           </div>
-          <div style={{ overflowY: 'auto', flex: 1, paddingRight: '8px' }}>
-            <table className="data-table" style={{ width: '100%' }}>
-              <thead>
-                <tr>
-                  <th className="text-left">Time</th>
-                  <th className="text-left">Side</th>
-                  <th>Price</th>
-                  <th>Amount (BTC)</th>
+          <div className="flex-1 mt-2" style={{ overflowY: 'auto' }}>
+            <table className="w-full text-sm">
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-panel)', zIndex: 1 }}>
+                <tr className="text-muted border-b border-gray-800">
+                  <th className="text-left py-2 font-normal">TIME</th>
+                  <th className="text-left py-2 font-normal">SIDE</th>
+                  <th className="text-right py-2 font-normal">PRICE</th>
+                  <th className="text-right py-2 font-normal">AMOUNT (BTC)</th>
                 </tr>
               </thead>
               <tbody>
                 {liquidations.map((liq, idx) => (
-                  <tr key={idx}>
-                    <td className="text-left text-muted">{new Date(liq.time).toLocaleTimeString()}</td>
-                    <td className="text-left font-bold" style={{ color: liq.side === 'SELL' ? 'var(--accent-put)' : 'var(--accent-call)' }}>
+                  <tr key={idx} className="border-b border-gray-800/50">
+                    <td className="text-left py-3 text-muted">{new Date(liq.time).toLocaleTimeString()}</td>
+                    <td className="text-left py-3 font-bold" style={{ color: liq.side === 'SELL' ? 'var(--accent-put)' : 'var(--accent-call)' }}>
                       {liq.side === 'SELL' ? 'LONG LIQ' : 'SHORT LIQ'}
                     </td>
-                    <td style={{ color: liq.side === 'SELL' ? 'var(--accent-put)' : 'var(--accent-call)' }}>
+                    <td className="text-right py-3" style={{ color: liq.side === 'SELL' ? 'var(--accent-put)' : 'var(--accent-call)' }}>
                       {formatCurrency(liq.price)}
                     </td>
-                    <td>{liq.qty.toFixed(3)}</td>
+                    <td className="text-right py-3 text-gray-300">{liq.qty.toFixed(3)}</td>
                   </tr>
                 ))}
                 {liquidations.length === 0 && (

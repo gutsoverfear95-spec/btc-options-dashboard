@@ -4,7 +4,7 @@ import type { OptionData } from './deribit';
 export const fetchBinanceOptionsData = async (): Promise<OptionData[]> => {
   try {
     // 1. Get all Mark Prices (contains gamma, markPrice, etc)
-    const markRes = await fetch('https://eapi.binance.com/eapi/v1/mark');
+    const markRes = await fetch('/api/binance-options/mark');
     const markData: any[] = await markRes.json();
     
     const btcMarks = markData.filter(m => m.symbol.startsWith('BTC-'));
@@ -21,7 +21,7 @@ export const fetchBinanceOptionsData = async (): Promise<OptionData[]> => {
 
     // 2. Fetch Open Interest for all expirations in parallel
     const oiPromises = expirations.map(exp => 
-      fetch(`https://eapi.binance.com/eapi/v1/openInterest?underlyingAsset=BTC&expiration=${exp}`)
+      fetch(`/api/binance-options/openInterest?underlyingAsset=BTC&expiration=${exp}`)
         .then(res => res.json())
         .catch(() => []) // Fallback to empty array on failure
     );
