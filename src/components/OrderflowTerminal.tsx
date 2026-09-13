@@ -66,8 +66,8 @@ export const OrderflowTerminal = () => {
         const histData = await fetchHistoricalKlines('BTCUSDT', '1m', 100);
         
         // Ensure data is sorted by time ascending and unique
-        const uniqueData = Array.from(new Map(histData.map(item => [item.time, item])).values())
-          .sort((a, b) => a.time - b.time);
+        const uniqueData = Array.from(new Map(histData.map((item: any) => [item.time, item])).values())
+          .sort((a: any, b: any) => a.time - b.time);
 
         candleSeries.setData(uniqueData.map((d: any) => ({
           time: d.time as any,
@@ -84,7 +84,7 @@ export const OrderflowTerminal = () => {
         })));
         
         if (uniqueData.length > 0) {
-          setPrice(uniqueData[uniqueData.length - 1].close);
+          setPrice((uniqueData[uniqueData.length - 1] as any).close);
         }
       } catch (err) {
         console.error("Error initializing chart data:", err);
