@@ -57,7 +57,7 @@ export class BinanceWebSocket {
       } else if (stream.endsWith('@kline_1m')) {
         const k = payload.k;
         this.klineCallbacks.forEach(cb => cb({
-          time: k.t / 1000, // lightweight-charts uses seconds for time
+          time: Math.floor(k.t / 1000), // lightweight-charts uses seconds for time
           open: parseFloat(k.o),
           high: parseFloat(k.h),
           low: parseFloat(k.l),
@@ -99,7 +99,7 @@ export const fetchHistoricalKlines = async (symbol: string = 'BTCUSDT', interval
   const data = await res.json();
   
   return data.map((d: any) => ({
-    time: d[0] / 1000,
+    time: Math.floor(d[0] / 1000),
     open: parseFloat(d[1]),
     high: parseFloat(d[2]),
     low: parseFloat(d[3]),

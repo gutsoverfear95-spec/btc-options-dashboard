@@ -62,21 +62,32 @@ export const OrderflowTerminal = () => {
     setVolumeSeries(volSeries);
 
     const initData = async () => {
-      const histData = await fetchHistoricalKlines('BTCUSDT', '1m', 100);
-      candleSeries.setData(histData.map((d: any) => ({
-        time: d.time as any,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close
-      })));
-      volSeries.setData(histData.map((d: any) => ({
-        time: d.time as any,
-        value: d.volume,
-        color: d.close >= d.open ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 23, 68, 0.4)'
-      })));
-      if (histData.length > 0) {
-        setPrice(histData[histData.length - 1].close);
+      try {
+        const histData = await fetchHistoricalKlines('BTCUSDT', '1m', 100);
+        
+        // Ensure data is sorted by time ascending and unique
+        const uniqueData = Array.from(new Map(histData.map(item => [item.time, item])).values())
+          .sort((a, b) => a.time - b.time);
+
+        candleSeries.setData(uniqueData.map((d: any) => ({
+          time: d.time as any,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close
+        })));
+        
+        volSeries.setData(uniqueData.map((d: any) => ({
+          time: d.time as any,
+          value: d.volume,
+          color: d.close >= d.open ? 'rgba(0, 230, 118, 0.4)' : 'rgba(255, 23, 68, 0.4)'
+        })));
+        
+        if (uniqueData.length > 0) {
+          setPrice(uniqueData[uniqueData.length - 1].close);
+        }
+      } catch (err) {
+        console.error("Error initializing chart data:", err);
       }
     };
 
@@ -101,16 +112,18 @@ export const OrderflowTerminal = () => {
     const ws = new BinanceWebSocket('btcusdt');
 
     ws.onKline((candle) => {
-      candlestickSeries.update({
-        time: candle.time as any,
-        open: candle.open,
-        high: candle.high,
-        low: candle.low,
-        close: candle.close,
-      });
-      setPrice(candle.close);
-      // We don't have accurate realtime volume per second in lightweight chart stream easily, 
-      // but we could track it. Skipping realtime volume update for simplicity in Phase 1.
+      try {
+        candlestickSeries.update({
+          time: candle.time as any,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+        });
+        setPrice(candle.close);
+      } catch (err) {
+        // Ignore out of order or duplicate time errors from lightweight-charts
+      }
     });
 
     ws.onLiquidation((liq) => {
