@@ -22,7 +22,14 @@ export const fetchJson = async <T>(
     });
 
     if (!response.ok) {
-      throw new Error(`Request failed (${response.status} ${response.statusText})`);
+      let detail = '';
+      try {
+        const body = await response.clone().json() as { error?: string };
+        detail = body.error ? `: ${body.error}` : '';
+      } catch {
+        // Keep the status-based message when the upstream body is not JSON.
+      }
+      throw new Error(`Request failed (${response.status} ${response.statusText})${detail}`);
     }
 
     return await response.json() as T;
