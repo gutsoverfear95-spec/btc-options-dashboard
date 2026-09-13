@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
-import { BinanceWebSocket, type LiquidationEvent, fetchHistoricalKlines } from '../services/binance';
+import { BinanceWebSocket, type BinanceConnectionStatus, type LiquidationEvent, fetchHistoricalKlines } from '../services/binance';
 import { formatCurrency } from '../utils/formatters';
 
 export const OrderflowTerminal = () => {
@@ -10,6 +10,7 @@ export const OrderflowTerminal = () => {
   
   const [liquidations, setLiquidations] = useState<LiquidationEvent[]>([]);
   const [price, setPrice] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<BinanceConnectionStatus>('connecting');
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -140,6 +141,7 @@ export const OrderflowTerminal = () => {
     ws.onLiquidation((liq) => {
       setLiquidations(prev => [liq, ...prev].slice(0, 50)); // keep last 50
     });
+    ws.onStatus(setConnectionStatus);
 
     return () => {
       ws.disconnect();
@@ -172,7 +174,17 @@ export const OrderflowTerminal = () => {
         {/* Liquidation Feed */}
         <div className="w-[450px] shrink-0 rounded-xl p-4 flex flex-col" style={{ background: 'var(--bg-panel)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="panel-title text-sm" style={{ margin: 0 }}>Liquidation Feed</h2>
+            <h2 className="panel-title text-sm" style={{ margin: 0 }}>
+              Liquidation Feed
+              <span
+                className="text-muted"
+                style={{ fontSize: '0.7rem', marginLeft: 8 }}
+              >
+                {connectionStatus === 'connected'
+                  ? 'LIVE'
+                  : connectionStatus.toUpperCase()}
+              </span>
+            </h2>
           </div>
           <div className="flex-1 mt-2" style={{ overflowY: 'auto' }}>
             <table className="w-full text-sm">
@@ -200,7 +212,9 @@ export const OrderflowTerminal = () => {
                 {liquidations.length === 0 && (
                   <tr>
                     <td colSpan={4} className="text-center text-muted" style={{ padding: '24px 0' }}>
-                      Waiting for liquidations...
+                      {connectionStatus === 'connected'
+                        ? 'Connected — waiting for liquidations...'
+                        : 'Connecting to Binance liquidation stream...'}
                     </td>
                   </tr>
                 )}

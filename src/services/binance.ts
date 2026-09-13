@@ -23,13 +23,17 @@ export interface KlineEvent {
   isFinal: boolean;
 }
 
+export type BinanceConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
 export class BinanceWebSocket {
   private ws: WebSocket | null = null;
   private liquidationCallbacks: ((event: LiquidationEvent) => void)[] = [];
   private tradeCallbacks: ((event: TradeEvent) => void)[] = [];
   private klineCallbacks: ((candle: KlineEvent) => void)[] = [];
+  private statusCallbacks: ((status: BinanceConnectionStatus) => void)[] = [];
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
+  private status: BinanceConnectionStatus = 'connecting';
 
   private symbol: string;
 
@@ -40,10 +44,18 @@ export class BinanceWebSocket {
 
   private connect() {
     if (this.disposed) return;
+    this.setStatus('connecting');
 
     // Connect to multiple streams: aggTrade, forceOrder (liquidations), and kline_1m
-    const streamUrl = `wss://fstream.binance.com/stream?streams=${this.symbol}@aggTrade/${this.symbol}@forceOrder/${this.symbol}@kline_1m`;
+    const streamUrl = `wss://fstream.binance.com/market/stream?streams=${this.symbol}@aggTrade/${this.symbol}@forceOrder/${this.symbol}@kline_1m`;
     this.ws = new WebSocket(streamUrl);
+
+    this.ws.onopen = () => this.setStatus('connected');
+
+    this.ws.onerror = () => {
+      this.setStatus('error');
+      this.ws?.close();
+    };
 
     this.ws.onmessage = (event) => {
       try {
@@ -88,6 +100,7 @@ export class BinanceWebSocket {
 
     this.ws.onclose = () => {
       if (this.disposed) return;
+      this.setStatus('disconnected');
       console.log('Binance WS disconnected. Reconnecting in 3s...');
       this.reconnectTimer = setTimeout(() => {
         this.reconnectTimer = null;
@@ -106,6 +119,16 @@ export class BinanceWebSocket {
 
   onKline(cb: (candle: KlineEvent) => void) {
     this.klineCallbacks.push(cb);
+  }
+
+  onStatus(cb: (status: BinanceConnectionStatus) => void) {
+    this.statusCallbacks.push(cb);
+    cb(this.status);
+  }
+
+  private setStatus(status: BinanceConnectionStatus) {
+    this.status = status;
+    this.statusCallbacks.forEach(cb => cb(status));
   }
 
   disconnect() {

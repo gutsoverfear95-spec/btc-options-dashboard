@@ -1,9 +1,23 @@
 const BINANCE_OPTIONS_BASE = 'https://eapi.binance.com/eapi/v1';
 
+const getPath = (event) => {
+  const candidates = [
+    event.path,
+    event.resource,
+    event.rawUrl ? new URL(event.rawUrl).pathname : '',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const normalized = candidate.replace(/\/+$/, '');
+    const match = normalized.match(/(?:binance-options|api\/binance-options)(?:\/|$)(.*)$/);
+    if (match) return match[1].replace(/^\/+|\/+$/g, '');
+  }
+
+  return '';
+};
+
 const getEndpoint = (event) => {
-  const path = event.path || '';
-  const match = path.match(/(?:binance-options|api\/binance-options)\/(.+)$/);
-  return match?.[1] || '';
+  return getPath(event);
 };
 
 const getQuery = (event) => {
