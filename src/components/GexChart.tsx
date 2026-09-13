@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -10,7 +10,7 @@ import {
   Cell,
   ReferenceLine
 } from 'recharts';
-import { OptionData } from '../services/deribit';
+import type { OptionData } from '../services/deribit';
 import { formatCompact, formatCurrency } from '../utils/formatters';
 
 interface Props {

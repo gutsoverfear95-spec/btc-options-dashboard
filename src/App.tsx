@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Activity, RefreshCcw } from 'lucide-react';
-import { fetchOptionsData, OptionData } from './services/deribit';
+import { fetchOptionsData, type OptionData } from './services/deribit';
 import { MarketSummary } from './components/MarketSummary';
 import { GexChart } from './components/GexChart';
 import { OptionsTable } from './components/OptionsTable';

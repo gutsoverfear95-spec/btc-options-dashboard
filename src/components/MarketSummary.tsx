@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { OptionData } from '../services/deribit';
-import { formatCompact, formatCurrency, formatNumber } from '../utils/formatters';
+import { useMemo } from 'react';
+import type { OptionData } from '../services/deribit';
+import { formatCompact, formatCurrency } from '../utils/formatters';
 
 interface Props {
   options: OptionData[];
