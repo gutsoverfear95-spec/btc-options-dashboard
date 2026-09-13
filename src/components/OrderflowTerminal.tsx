@@ -11,6 +11,8 @@ export const OrderflowTerminal = () => {
   const [liquidations, setLiquidations] = useState<LiquidationEvent[]>([]);
   const [price, setPrice] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<BinanceConnectionStatus>('connecting');
+  const [lastStreamMessageAt, setLastStreamMessageAt] = useState<number | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -142,11 +144,21 @@ export const OrderflowTerminal = () => {
       setLiquidations(prev => [liq, ...prev].slice(0, 50)); // keep last 50
     });
     ws.onStatus(setConnectionStatus);
+    ws.onHeartbeat(setLastStreamMessageAt);
 
     return () => {
       ws.disconnect();
     };
   }, [candlestickSeries, volumeSeries]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setClock(Date.now()), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const streamHealthy = connectionStatus === 'connected'
+    && lastStreamMessageAt !== null
+    && clock - lastStreamMessageAt < 15_000;
 
   return (
     <div className="flex-col gap-6 w-full">
@@ -181,7 +193,7 @@ export const OrderflowTerminal = () => {
                 style={{ fontSize: '0.7rem', marginLeft: 8 }}
               >
                 {connectionStatus === 'connected'
-                  ? 'LIVE'
+                  ? streamHealthy ? 'LIVE' : 'STALE'
                   : connectionStatus.toUpperCase()}
               </span>
             </h2>
@@ -212,8 +224,8 @@ export const OrderflowTerminal = () => {
                 {liquidations.length === 0 && (
                   <tr>
                     <td colSpan={4} className="text-center text-muted" style={{ padding: '24px 0' }}>
-                      {connectionStatus === 'connected'
-                        ? 'Connected — waiting for liquidations...'
+                      {streamHealthy
+                        ? 'Market stream live — waiting for liquidation events...'
                         : 'Connecting to Binance liquidation stream...'}
                     </td>
                   </tr>

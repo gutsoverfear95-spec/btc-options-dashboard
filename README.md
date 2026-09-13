@@ -33,7 +33,7 @@ Browser requests use same-origin routes:
 - `/api/binance-options/*` proxies Binance Options API.
 - `/api/binance-spot/*` proxies Binance Spot API.
 
-Local development uses the proxy in `vite.config.ts`. Netlify deployments use the functions in `netlify/functions` through the matching rules in `public/_redirects`; this avoids forwarding the browser `Origin` header that Binance may reject with HTTP 403. Other hosting providers need equivalent server-side rewrites or serverless functions.
+Local development uses the proxy in `vite.config.ts`. Vercel deployments use the serverless functions in `api/`; Netlify deployments use the equivalent functions in `netlify/functions` through `public/_redirects`. The server-side proxy avoids forwarding the browser `Origin` header that Binance may reject with HTTP 403. Other hosting providers need equivalent server-side rewrites or serverless functions.
 
 GEX is normalized as dollar exposure for a 1% underlying move. Binance data currently assumes a 1 BTC contract, so the exchange contract multiplier should be revalidated if Binance changes its product specification.
 

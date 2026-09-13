@@ -31,6 +31,7 @@ export class BinanceWebSocket {
   private tradeCallbacks: ((event: TradeEvent) => void)[] = [];
   private klineCallbacks: ((candle: KlineEvent) => void)[] = [];
   private statusCallbacks: ((status: BinanceConnectionStatus) => void)[] = [];
+  private heartbeatCallbacks: ((timestamp: number) => void)[] = [];
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private disposed = false;
   private status: BinanceConnectionStatus = 'connecting';
@@ -64,6 +65,7 @@ export class BinanceWebSocket {
 
         const stream = data.stream;
         const payload = data.data;
+        this.heartbeatCallbacks.forEach(cb => cb(Date.now()));
 
         if (stream.endsWith('@forceOrder')) {
           const order = payload.o;
@@ -124,6 +126,10 @@ export class BinanceWebSocket {
   onStatus(cb: (status: BinanceConnectionStatus) => void) {
     this.statusCallbacks.push(cb);
     cb(this.status);
+  }
+
+  onHeartbeat(cb: (timestamp: number) => void) {
+    this.heartbeatCallbacks.push(cb);
   }
 
   private setStatus(status: BinanceConnectionStatus) {
