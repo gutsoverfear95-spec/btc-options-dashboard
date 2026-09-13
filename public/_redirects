@@ -1,3 +1,3 @@
-/api/binance-options/*  https://eapi.binance.com/eapi/v1/:splat  200
-/api/binance-spot/*  https://api.binance.com/api/v3/:splat  200
+/api/binance-options/*  /.netlify/functions/binance-options/:splat  200
+/api/binance-spot/*  /.netlify/functions/binance-spot/:splat  200
 /* /index.html 200
