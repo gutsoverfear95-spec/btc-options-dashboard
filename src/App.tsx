@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Activity, LayoutDashboard, CandlestickChart } from 'lucide-react';
+import { Activity, LayoutDashboard, CandlestickChart, Newspaper } from 'lucide-react';
 
 const GexDashboard = lazy(() =>
   import('./components/GexDashboard').then(module => ({ default: module.GexDashboard })),
@@ -7,15 +7,18 @@ const GexDashboard = lazy(() =>
 const OrderflowTerminal = lazy(() =>
   import('./components/OrderflowTerminal').then(module => ({ default: module.OrderflowTerminal })),
 );
+const MacroNews = lazy(() =>
+  import('./components/MacroNews').then(module => ({ default: module.MacroNews })),
+);
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'gex' | 'orderflow'>('gex');
+  const [activeTab, setActiveTab] = useState<'gex' | 'orderflow' | 'news'>('news');
 
   return (
     <div className="app-container" style={{ flexDirection: 'row', gap: 32, maxWidth: '1600px' }}>
       
       {/* Sidebar Navigation */}
-      <aside style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <aside style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: 24, flexShrink: 0 }}>
         <div className="logo" style={{ marginBottom: 12 }}>
           <Activity size={28} color="var(--accent-blue)" />
           AlphaFlow
@@ -37,7 +40,16 @@ function App() {
             style={{ justifyContent: 'flex-start', padding: '12px 16px', fontSize: '1rem', border: 'none', background: activeTab === 'orderflow' ? 'rgba(0, 210, 255, 0.1)' : 'transparent' }}
           >
             <CandlestickChart size={20} />
-            Orderflow Terminal
+            Orderflow
+          </button>
+          
+          <button 
+            className={`btn ${activeTab === 'news' ? 'active' : ''}`}
+            onClick={() => setActiveTab('news')}
+            style={{ justifyContent: 'flex-start', padding: '12px 16px', fontSize: '1rem', border: 'none', background: activeTab === 'news' ? 'rgba(0, 210, 255, 0.1)' : 'transparent' }}
+          >
+            <Newspaper size={20} />
+            Macro News
           </button>
         </nav>
       </aside>
@@ -47,6 +59,7 @@ function App() {
         <Suspense fallback={<div className="loader-container">Loading dashboard...</div>}>
           {activeTab === 'gex' && <GexDashboard />}
           {activeTab === 'orderflow' && <OrderflowTerminal />}
+          {activeTab === 'news' && <MacroNews />}
         </Suspense>
       </main>
 
