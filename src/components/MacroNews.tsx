@@ -169,17 +169,51 @@ export const MacroNews = () => {
     fetchNews();
   }, []);
 
-  // Load Twitter widgets script
+  // Load Twitter widgets script robustly
   useEffect(() => {
+    // Official Twitter script snippet
+    const loadTwitter = () => {
+      // @ts-ignore
+      window.twttr = (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0],
+          t = (window as any).twttr || {};
+        if (d.getElementById(id)) return t;
+        js = d.createElement(s) as HTMLScriptElement;
+        js.id = id;
+        js.src = "https://platform.twitter.com/widgets.js";
+        if (fjs && fjs.parentNode) {
+          fjs.parentNode.insertBefore(js, fjs);
+        } else {
+          d.head.appendChild(js);
+        }
+        t._e = [];
+        t.ready = function(f: any) {
+          t._e.push(f);
+        };
+        return t;
+      }(document, "script", "twitter-wjs"));
+    };
+
+    if (!(window as any).twttr) {
+      loadTwitter();
+    }
+
     if (filter === 'twitter') {
-      const script = document.createElement("script");
-      script.src = "https://platform.twitter.com/widgets.js";
-      script.async = true;
-      document.body.appendChild(script);
-      
-      // Trigger reload if script already exists to ensure widget renders
       if ((window as any).twttr && (window as any).twttr.widgets) {
-        (window as any).twttr.widgets.load();
+        // Use setTimeout to ensure DOM is ready before parsing
+        setTimeout(() => {
+          (window as any).twttr.widgets.load();
+        }, 100);
+      } else {
+        // If it's not ready yet, queue it
+        // @ts-ignore
+        if ((window as any).twttr && (window as any).twttr.ready) {
+          (window as any).twttr.ready((twttr: any) => {
+            setTimeout(() => {
+              twttr.widgets.load();
+            }, 100);
+          });
+        }
       }
     }
   }, [filter]);
