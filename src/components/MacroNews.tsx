@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { TwitterFeed } from './TwitterFeed';
 import { Clock, ExternalLink, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
 
 // --- Types ---
@@ -169,55 +170,6 @@ export const MacroNews = () => {
     fetchNews();
   }, []);
 
-  // Load Twitter widgets script robustly
-  useEffect(() => {
-    // Official Twitter script snippet
-    const loadTwitter = () => {
-      // @ts-ignore
-      window.twttr = (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0],
-          t = (window as any).twttr || {};
-        if (d.getElementById(id)) return t;
-        js = d.createElement(s) as HTMLScriptElement;
-        js.id = id;
-        js.src = "https://platform.twitter.com/widgets.js";
-        if (fjs && fjs.parentNode) {
-          fjs.parentNode.insertBefore(js, fjs);
-        } else {
-          d.head.appendChild(js);
-        }
-        t._e = [];
-        t.ready = function(f: any) {
-          t._e.push(f);
-        };
-        return t;
-      }(document, "script", "twitter-wjs"));
-    };
-
-    if (!(window as any).twttr) {
-      loadTwitter();
-    }
-
-    if (filter === 'twitter') {
-      if ((window as any).twttr && (window as any).twttr.widgets) {
-        // Use setTimeout to ensure DOM is ready before parsing
-        setTimeout(() => {
-          (window as any).twttr.widgets.load();
-        }, 100);
-      } else {
-        // If it's not ready yet, queue it
-        // @ts-ignore
-        if ((window as any).twttr && (window as any).twttr.ready) {
-          (window as any).twttr.ready((twttr: any) => {
-            setTimeout(() => {
-              twttr.widgets.load();
-            }, 100);
-          });
-        }
-      }
-    }
-  }, [filter]);
-
   return (
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
       
@@ -233,16 +185,7 @@ export const MacroNews = () => {
         </div>
 
         {filter === 'twitter' ? (
-          <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-            <a 
-              className="twitter-timeline" 
-              data-theme="dark" 
-              data-height="800"
-              data-chrome="nofooter noborders transparent"
-              href="https://twitter.com/markets?ref_src=twsrc%5Etfw">
-              Loading Tweets...
-            </a>
-          </div>
+          <TwitterFeed />
         ) : loading ? (
           <div className="loader-container" style={{ height: '300px' }}>
             <div className="spinner"></div>

@@ -15,6 +15,7 @@ Other useful commands:
 npm run lint
 npm run build
 npm run preview
+npm test
 ```
 
 ## Features
@@ -27,6 +28,17 @@ npm run preview
 - Automatic refresh every 60 seconds.
 
 ## Data and deployment
+
+### X / Twitter feed
+
+Macro News embeds the public `@markets` timeline using X's official widget.
+The widget script loads only when the X tab is opened. Script failures (10-second
+timeout) and timeline failures (20-second overall timeout) show a retry button
+and a direct link to the profile. Switching tabs cleans up the previous widget.
+Browser privacy settings, network failures, or X service restrictions can prevent
+the embed from loading; this integration cannot guarantee live post availability.
+It does not require or expose an API token. `npm test` covers the widget lifecycle
+with mocked X responses; it does not verify X's live service.
 
 Browser requests use same-origin routes:
 
