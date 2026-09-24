@@ -1,240 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import { AssetSentiment } from './AssetSentiment';
 import { TwitterFeed } from './TwitterFeed';
-import { Clock, ExternalLink, Calendar } from 'lucide-react';
-
-// --- Types ---
-interface NewsItem {
-  id: string;
-  title: string;
-  summary: string;
-  source: string;
-  time: string;
-  url: string;
-}
-
-// --- Helper Functions ---
-const formatTimeAgo = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-  
-  if (diffInHours < 1) return 'Just now';
-  if (diffInHours === 1) return '1 hour ago';
-  if (diffInHours < 24) return `${diffInHours} hours ago`;
-  return `${Math.floor(diffInHours / 24)} days ago`;
-};
-
-// --- Mock Calendar Data ---
-const MOCK_CALENDAR = [
-  {
-    id: 1,
-    date: "Today, 08:30 AM",
-    event: "Core PCE Price Index (MoM)",
-    country: "US",
-    impact: "high",
-    actual: "0.2%",
-    forecast: "0.2%",
-    previous: "0.1%"
-  },
-  {
-    id: 2,
-    date: "Today, 10:00 AM",
-    event: "ISM Manufacturing PMI",
-    country: "US",
-    impact: "high",
-    actual: "-",
-    forecast: "47.5",
-    previous: "46.8"
-  },
-  {
-    id: 3,
-    date: "Tomorrow, 14:00 PM",
-    event: "FOMC Member Williams Speaks",
-    country: "US",
-    impact: "medium",
-    actual: "-",
-    forecast: "-",
-    previous: "-"
-  },
-  {
-    id: 4,
-    date: "Thu, 13:45 PM",
-    event: "ECB Interest Rate Decision",
-    country: "EU",
-    impact: "high",
-    actual: "-",
-    forecast: "3.50%",
-    previous: "3.75%"
-  },
-  {
-    id: 5,
-    date: "Fri, 08:30 AM",
-    event: "Non Farm Payrolls",
-    country: "US",
-    impact: "high",
-    actual: "-",
-    forecast: "165K",
-    previous: "114K"
-  }
-];
-
-// --- Components ---
-
-const ImpactBadge = ({ level }: { level: string }) => {
-  let color = 'var(--text-secondary)';
-  let bg = 'rgba(255,255,255,0.1)';
-  if (level === 'high') {
-    color = '#ff1744';
-    bg = 'rgba(255, 23, 68, 0.1)';
-  } else if (level === 'medium') {
-    color = '#ffb300';
-    bg = 'rgba(255, 179, 0, 0.1)';
-  }
-  
-  return (
-    <span style={{ padding: '2px 6px', borderRadius: '4px', backgroundColor: bg, color: color, fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase' }}>
-      {level}
-    </span>
-  );
-};
-
+import { useLiveNews } from '../hooks/useLiveNews';
+import './MacroNews.css';
+const FILTERS = ['All', 'US Stocks', 'Gold', 'Oil', 'Macro', 'OSINT'];
+const timestamp = (date: string) => new Date(date).toLocaleString();
 export const MacroNews = () => {
-  const [filter, setFilter] = useState<'rss' | 'twitter'>('rss');
-  const [newsData, setNewsData] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch RSS feed
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        setLoading(true);
-        // Using WSJ Markets RSS feed for US stocks, economy, and macro news
-        const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Ffeeds.a.dj.com%2Frss%2FRSSMarketsMain.xml');
-        const data = await response.json();
-        
-        if (data.status === 'ok') {
-          const formattedNews: NewsItem[] = data.items.map((item: any) => ({
-            id: item.guid,
-            title: item.title,
-            summary: item.description.replace(/<[^>]*>?/gm, '').substring(0, 120).trim() + '...',
-            source: 'WSJ Markets',
-            time: formatTimeAgo(item.pubDate),
-            url: item.link
-          }));
-          setNewsData(formattedNews);
-        }
-      } catch (error) {
-        console.error("Failed to fetch news", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchNews();
-  }, []);
-
-  return (
-    <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
-      
-      {/* Main Content: News Feed */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        
-        <div className="panel" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className="panel-title">Market Intelligence</h2>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className={`btn ${filter === 'rss' ? 'active' : ''}`} onClick={() => setFilter('rss')}>RSS Feed</button>
-            <button className={`btn ${filter === 'twitter' ? 'active' : ''}`} onClick={() => setFilter('twitter')}>X / Twitter</button>
-          </div>
-        </div>
-
-        {filter === 'twitter' ? (
-          <TwitterFeed />
-        ) : loading ? (
-          <div className="loader-container" style={{ height: '300px' }}>
-            <div className="spinner"></div>
-            <p>Fetching latest news...</p>
-          </div>
-        ) : (
-          <div className="grid-summary">
-            {newsData.map(news => (
-              <article key={news.id}>
-                <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }} 
-                     onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
-                     onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-                  
-                  <div className="news-card-header">
-                    <span className="text-secondary text-xs font-semibold" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{news.source}</span>
-                    <AssetSentiment title={news.title} />
-                  </div>
-                  
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', lineHeight: '1.4' }}><a href={news.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{news.title}</a></h3>
-                  
-                  <p className="text-secondary text-sm" style={{ flex: 1, marginBottom: '16px', lineHeight: '1.6' }}>
-                    {news.summary}
-                  </p>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                    <span className="text-muted text-xs" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} /> {news.time}
-                    </span>
-                    <ExternalLink size={14} className="text-muted" />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+  const [tab, setTab] = useState<'news' | 'twitter'>('news');
+  const [category, setCategory] = useState('All');
+  const news = useLiveNews(tab === 'news');
+  const visible = news.items.filter(item => category === 'All' || item.categories.includes(category));
+  const issues = news.sources.filter(source => source.status === 'error' || source.status === 'stale');
+  return <section className="macro-news">
+    <header className="panel news-toolbar">
+      <div><h2 className="panel-title">Market Intelligence</h2><p className="text-secondary text-xs">US stocks · Gold · Oil · Macro</p></div>
+      <div className="news-actions">
+        <button className={`btn ${tab === 'news' ? 'active' : ''}`} onClick={() => setTab('news')}>Live News</button>
+        <button className={`btn ${tab === 'twitter' ? 'active' : ''}`} onClick={() => setTab('twitter')}>X / Twitter</button>
       </div>
-
-      {/* Sidebar: Economic Calendar */}
-      <div className="panel" style={{ width: '350px', flexShrink: 0, position: 'sticky', top: '24px' }}>
-        <div className="panel-header" style={{ marginBottom: '16px' }}>
-          <h2 className="panel-title">
-            <Calendar size={20} className="text-blue" />
-            Economic Calendar (demo)
-          </h2>
+    </header>
+    {tab === 'twitter' ? <TwitterFeed /> : <>
+      <div className="panel news-controls">
+        <div className="news-actions" aria-label="News categories">{FILTERS.map(filter => <button key={filter} className={`btn ${category === filter ? 'active' : ''}`} aria-pressed={category === filter} onClick={() => setCategory(filter)}>{filter}</button>)}</div>
+        <div className="news-toolbar text-secondary text-xs">
+          <span role="status">{news.refreshing ? 'Checking sources…' : 'Auto-refresh: 60 seconds'} · Last checked: {news.checkedAt ? timestamp(news.checkedAt) : 'Not yet'}</span>
+          <button className="btn" disabled={news.refreshing} onClick={news.refresh}><RefreshCw size={14} /> Refresh</button>
         </div>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {MOCK_CALENDAR.map((event, index) => (
-            <div key={event.id} style={{ 
-              paddingBottom: index !== MOCK_CALENDAR.length - 1 ? '16px' : '0',
-              borderBottom: index !== MOCK_CALENDAR.length - 1 ? '1px solid var(--border-color)' : 'none'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span className="text-muted text-xs font-mono">{event.date}</span>
-                <span className="text-xs font-semibold">{event.country}</span>
-              </div>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '0.95rem', margin: 0, lineHeight: 1.3 }}>{event.event}</h4>
-                <ImpactBadge level={event.impact} />
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', backgroundColor: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>Actual</span>
-                  <span className="font-mono text-sm" style={{ color: event.actual !== '-' ? 'var(--text-primary)' : 'var(--text-muted)' }}>{event.actual}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>Forecast</span>
-                  <span className="font-mono text-sm text-secondary">{event.forecast}</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span className="text-muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>Previous</span>
-                  <span className="font-mono text-sm text-secondary">{event.previous}</span>
-                </div>
-              </div>
+        <p className="text-secondary text-xs">Checks pause in background tabs. RSS publication times vary; GDELT discovery refreshes every 15 minutes.</p>
+        {news.error && <p role="alert" className="news-warning">{news.error}</p>}
+        {!!issues.length && <p className="news-warning" role="status">Some sources are unavailable or cached: {issues.map(s => s.name).join(', ')}.</p>}
+        <details className="text-secondary text-xs"><summary>Sources &amp; freshness</summary>
+          <ul>{news.sources.map(source => <li key={source.id}>{source.name}: {source.status}{source.error ? ` (${source.error})` : ''} · Last fetched: {source.fetchedAt ? timestamp(source.fetchedAt) : 'Not yet'}</li>)}</ul>
+          <p>GDELT discovers reports from selected publishers; these are not independently verified OSINT findings. Dates on these items indicate discovery time. Headlines older than 45 days are excluded.</p>
+        </details>
+      </div>
+      {news.pending && <button className="btn active" onClick={news.showPending}>New headlines available — show without reloading</button>}
+      {news.loading ? <div className="loader-container" role="status"><div className="spinner" /><p>Fetching market headlines…</p></div>
+        : !visible.length ? <div className="panel" role="status">No recent headlines available for this category.{category === 'OSINT' && ' Check the GDELT source status above.'}</div>
+        : <div className="news-list">{visible.map(item => <article className="panel news-item" key={item.id}>
+          <div className="news-card-header">
+            <div><span className="text-secondary text-xs">{item.publisher}{item.sourceId === 'gdelt' ? ' · via GDELT' : ''}</span>
+              <div className="news-tags">{item.categories.map(tag => <span key={tag}>{tag}</span>)}</div>
             </div>
-          ))}
-        </div>
-        
-        <button className="btn w-full mt-2" style={{ marginTop: '16px', justifyContent: 'center' }}>
-          View Full Calendar
-        </button>
-      </div>
-
-    </div>
-  );
+            <AssetSentiment title={item.title} />
+          </div>
+          <h3><a href={item.url} target="_blank" rel="noopener noreferrer">{item.title} <ExternalLink size={14} /></a></h3>
+          <time className="text-secondary text-xs" dateTime={item.publishedAt}>{item.dateKind === 'discovered' ? 'Discovered' : 'Published'}: {timestamp(item.publishedAt)}{Date.parse(news.checkedAt ?? item.publishedAt) - Date.parse(item.publishedAt) > 7 * 86400000 ? ' · Older release' : ''}</time>
+        </article>)}</div>}
+    </>}
+  </section>;
 };
