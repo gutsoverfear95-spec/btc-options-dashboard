@@ -9,8 +9,8 @@ const names: Record<Asset, string> = {
   XAUUSD: 'gold(?: prices?| futures?)?|xauusd',
   WTI: 'wti(?: crude)?(?: prices?| futures?)?|(?:crude )?oil(?: prices?| futures?)?',
 };
-const up = 'rises?|rose|rising|rall(?:y|ies|ied)|surges?|surged|gains?|gained|jumps?|jumped|climbs?|climbed|advances?|advanced';
-const down = 'falls?|fell|falling|drops?|dropped|slides?|slid|sinks?|sank|declines?|declined|plunges?|plunged|tumbles?|tumbled|slips?|slipped';
+const up = '(?:settles?|settled|edges?|edged|closes?|closed)\\s+higher|rises?|rose|rising|rall(?:y|ies|ied)|surges?|surged|gains?|gained|jumps?|jumped|climbs?|climbed|advances?|advanced';
+const down = '(?:settles?|settled|edges?|edged|closes?|closed)\\s+lower|falls?|fell|falling|drops?|dropped|slides?|slid|sinks?|sank|declines?|declined|plunges?|plunged|tumbles?|tumbled|slips?|slipped';
 
 // Only explicit asset price statements: never transfer another asset's direction
 // or infer market reactions from an economic release's name alone.
@@ -21,7 +21,7 @@ export function assessAssets(title: string): AssetSignal[] {
     for (const clause of clauses) {
       // Forecasts, negation and comparisons are ambiguous without fuller context.
       if (/\b(?:not|no|never|fails?|failed|may|might|could|would|will|expected|expectations|forecast|forecasts|less|more|if|unless)\b/.test(clause)) continue;
-      const prefix = `\\b(?:${names[asset]})\\s+(?:(?:is|are|was|were)\\s+)?`;
+      const prefix = `\\b(?:${names[asset]})(?:,?\\s+(?:and\\s+)?silver)?\\s+(?:(?:is|are|was|were)\\s+)?`;
       if (new RegExp(`${prefix}(?:${up})\\b`, 'i').test(clause)) directions.add('Bullish');
       if (new RegExp(`${prefix}(?:${down})\\b`, 'i').test(clause)) directions.add('Bearish');
     }

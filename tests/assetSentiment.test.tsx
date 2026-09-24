@@ -23,3 +23,8 @@ it('switches the tag and explanation without navigating away', () => {
   expect(select.selectedOptions[0].textContent).toBe('WTI Bearish');
   expect(screen.getByText(/a downward/)).toBeTruthy();
 });
+it('recognizes a joint gold/silver price headline without tagging oil', () => {
+  const signals = assessAssets('Comex Gold, Silver Settle Lower');
+  expect(signals[2].direction).toBe('Bearish');
+  expect(signals[3].direction).toBe('Unclear');
+});
