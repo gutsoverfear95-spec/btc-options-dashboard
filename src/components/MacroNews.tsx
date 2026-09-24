@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { AssetSentiment } from './AssetSentiment';
 import { TwitterFeed } from './TwitterFeed';
-import { Clock, ExternalLink, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
+import { Clock, ExternalLink, Calendar } from 'lucide-react';
 
 // --- Types ---
 interface NewsItem {
@@ -9,24 +10,10 @@ interface NewsItem {
   summary: string;
   source: string;
   time: string;
-  sentiment: 'bullish' | 'bearish' | 'neutral';
   url: string;
 }
 
 // --- Helper Functions ---
-const getNaiveSentiment = (text: string): 'bullish' | 'bearish' | 'neutral' => {
-  const lower = text.toLowerCase();
-  const bullishWords = ['surge', 'rally', 'up', 'high', 'gain', 'jump', 'boom', 'reclaim'];
-  const bearishWords = ['drop', 'dip', 'down', 'low', 'fall', 'crash', 'plunge', 'weak', 'hack', 'exploit'];
-  
-  const isBullish = bullishWords.some(w => lower.includes(w));
-  const isBearish = bearishWords.some(w => lower.includes(w));
-  
-  if (isBullish && !isBearish) return 'bullish';
-  if (isBearish && !isBullish) return 'bearish';
-  return 'neutral';
-};
-
 const formatTimeAgo = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -94,28 +81,6 @@ const MOCK_CALENDAR = [
 
 // --- Components ---
 
-const SentimentBadge = ({ type }: { type: string }) => {
-  if (type === 'bullish') {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'rgba(0, 230, 118, 0.1)', color: 'var(--accent-call)', fontSize: '0.75rem', fontWeight: 600 }}>
-        <TrendingUp size={14} /> Bullish
-      </span>
-    );
-  }
-  if (type === 'bearish') {
-    return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'rgba(255, 23, 68, 0.1)', color: 'var(--accent-put)', fontSize: '0.75rem', fontWeight: 600 }}>
-        <TrendingDown size={14} /> Bearish
-      </span>
-    );
-  }
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: 'var(--text-secondary)', fontSize: '0.75rem', fontWeight: 600 }}>
-      <Minus size={14} /> Neutral
-    </span>
-  );
-};
-
 const ImpactBadge = ({ level }: { level: string }) => {
   let color = 'var(--text-secondary)';
   let bg = 'rgba(255,255,255,0.1)';
@@ -155,7 +120,6 @@ export const MacroNews = () => {
             summary: item.description.replace(/<[^>]*>?/gm, '').substring(0, 120).trim() + '...',
             source: 'WSJ Markets',
             time: formatTimeAgo(item.pubDate),
-            sentiment: getNaiveSentiment(item.title + ' ' + item.description),
             url: item.link
           }));
           setNewsData(formattedNews);
@@ -194,17 +158,17 @@ export const MacroNews = () => {
         ) : (
           <div className="grid-summary">
             {newsData.map(news => (
-              <a key={news.id} href={news.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+              <article key={news.id}>
                 <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'transform 0.2s ease, border-color 0.2s ease' }} 
                      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
                      onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
                   
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div className="news-card-header">
                     <span className="text-secondary text-xs font-semibold" style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{news.source}</span>
-                    <SentimentBadge type={news.sentiment} />
+                    <AssetSentiment title={news.title} />
                   </div>
                   
-                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', lineHeight: '1.4' }}>{news.title}</h3>
+                  <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', lineHeight: '1.4' }}><a href={news.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{news.title}</a></h3>
                   
                   <p className="text-secondary text-sm" style={{ flex: 1, marginBottom: '16px', lineHeight: '1.6' }}>
                     {news.summary}
@@ -217,7 +181,7 @@ export const MacroNews = () => {
                     <ExternalLink size={14} className="text-muted" />
                   </div>
                 </div>
-              </a>
+              </article>
             ))}
           </div>
         )}
@@ -228,7 +192,7 @@ export const MacroNews = () => {
         <div className="panel-header" style={{ marginBottom: '16px' }}>
           <h2 className="panel-title">
             <Calendar size={20} className="text-blue" />
-            Economic Calendar
+            Economic Calendar (demo)
           </h2>
         </div>
         

@@ -50,3 +50,14 @@ Local development uses the proxy in `vite.config.ts`. Vercel deployments use the
 GEX is normalized as dollar exposure for a 1% underlying move. Binance data currently assumes a 1 BTC contract, so the exchange contract multiplier should be revalidated if Binance changes its product specification.
 
 This project is an analytics tool, not financial advice. Validate calculations against exchange data before using them for trading decisions.
+
+### Per-asset headline tags
+
+Each news card has a keyboard-accessible selector for NASDAQ, SP500, XAUUSD,
+and WTI, inspired by the compact asset tag in economic calendars. Bullish and
+Bearish describe explicit price moves reported in the English headline, not a
+forecast of the asset's future reaction. Mixed means conflicting price moves;
+Unclear means insufficient evidence, not a neutral outlook. Expand Headline
+estimate to see the reason. Negated, conditional and expectation-based clauses
+are intentionally left unclassified. Macro event names alone do not generate
+an impact prediction. News sources are unchanged by this UI update.
