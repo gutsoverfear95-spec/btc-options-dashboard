@@ -61,3 +61,34 @@ Unclear means insufficient evidence, not a neutral outlook. Expand Headline
 estimate to see the reason. Negated, conditional and expectation-based clauses
 are intentionally left unclassified. Macro event names alone do not generate
 an impact prediction. News sources are unchanged by this UI update.
+
+### Live macro news
+
+`/api/news` aggregates Bloomberg Markets, CNBC Markets, Federal Reserve monetary releases, BLS CPI
+and Employment (Atom), BEA, and EIA Today in Energy. These sources replace the
+obsolete WSJ/rss2json feed. Headlines link to the original publisher; full articles
+are not republished. The old demonstration economic calendar has been removed.
+
+GDELT adds an optional OSINT discovery category restricted to selected news
+publishers (Reuters, AP, BBC, CNBC). Its timestamps are discovery times, not
+verified publication times. GDELT is not a verification authority. If unavailable,
+its source status is displayed without blocking the other feeds.
+
+The visible Live News tab polls every 60 seconds and refreshes on return from a
+background tab. Timers and requests stop when leaving Live News. New items appear
+automatically near the top; while reading lower down, a button reveals queued
+headlines without reloading or shifting the reading position. Failures retain
+loaded items. Last checked and each source's last successful fetch are separate.
+
+Server requests have 6-second timeouts, per-source in-memory caches (60 seconds;
+15 minutes for GDELT) and shared in-flight requests per function instance. CDN
+responses can be cached for 30 seconds. Caches are best effort, not durable across
+serverless cold starts; the browser also retains current items on errors. Dates
+older than 45 days, malformed dates and non-HTTP links are excluded. Older releases
+are labeled. Polling frequency is not a guarantee that publishers release new
+headlines every minute. No API key or paid service is required by this integration.
+
+Vercel uses `api/news.js`; Netlify uses `netlify/functions/news.mjs` and its rewrite.
+The Vite dev middleware exposes the same route locally. `npm test` covers RSS/Atom
+parsing, deduplication, stale fallback, source failures, polling, visibility and
+reading-position queues, as well as the existing sentiment and widget behavior.

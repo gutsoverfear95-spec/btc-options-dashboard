@@ -1,3 +1,4 @@
+/api/news  /.netlify/functions/news  200
 /api/binance-options/mark  /.netlify/functions/binance-options/mark  200
 /api/binance-options/openInterest  /.netlify/functions/binance-options/openInterest  200
 /api/binance-spot/ticker/price  /.netlify/functions/binance-spot/ticker/price  200
