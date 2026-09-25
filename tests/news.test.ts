@@ -53,3 +53,7 @@ it('filters general-interest stories and decodes numeric headline entities', () 
  expect(parseFeed(xml, {...source,id:'cnbc'}, now)).toEqual([]);
  expect(parseFeed(rss().replace('Gold rises &amp; oil falls', 'Fed&#39;s rate decision'), source, now)[0].title).toBe("Fed's rate decision");
 });
+it('does not tag Goldman Sachs as Gold', () => {
+ const [item] = parseFeed(rss().replace('Gold rises &amp; oil falls', 'Goldman sees stocks rising'), source, now);
+ expect(item.categories).toEqual(['US Stocks']);
+});

@@ -31,7 +31,7 @@ export function safeUrl(value) {
 function categories(title, source) {
   const result = new Set(source.category ? [source.category] : []);
   if (/nasdaq|s&p|stocks?|equities|wall street|earnings|nvidia|microsoft|apple|meta\b|\bai\b|tech\b|\bshares?\b|small caps|tesla|oracle|amazon/i.test(title)) result.add('US Stocks');
-  if (/gold|bullion|xau/i.test(title)) result.add('Gold');
+  if (/\bgold\b|\bbullion\b|\bxau(?:usd)?\b/i.test(title)) result.add('Gold');
   if (/\boil\b|crude|opec|petroleum|brent|\bwti\b|energy/i.test(title)) result.add('Oil');
   if (/fed\b|inflation|cpi|pce|payroll|employment|gdp|\brates?\b|treasur|yields?|dollar|tariff|econom|central bank|\bbonds?\b|sanctions?|\bwar\b|trade deal|trade talks/i.test(title)) result.add('Macro');
   return result.size ? [...result] : ['Markets'];
