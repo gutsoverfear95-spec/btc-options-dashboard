@@ -40,7 +40,7 @@ export const MacroNews = () => {
         : !visible.length ? <div className="panel" role="status">No recent headlines available for this category.{category === 'OSINT' && ' Check the GDELT source status above.'}</div>
         : <div className="news-list">{visible.map(item => <article className="panel news-item" key={item.id}>
           <div className="news-card-header">
-            <div><span className="text-secondary text-xs">{item.publisher}{item.sourceId === 'gdelt' ? ' · via GDELT' : ''}</span>
+            <div><span className="text-secondary text-xs">{item.publisher}{item.sourceId === 'gdelt' ? ' · via GDELT' : ''}{item.sourceId === 'zerohedge' ? ' · News & commentary' : ''}{['fed', 'bea', 'bls-cpi', 'bls-jobs', 'eia'].includes(item.sourceId) ? ' · Official release' : ''}</span>
               <div className="news-tags">{item.categories.map(tag => <span key={tag}>{tag}</span>)}</div>
             </div>
             <AssetSentiment title={item.title} />

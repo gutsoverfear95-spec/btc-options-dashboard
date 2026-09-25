@@ -57,3 +57,10 @@ it('does not tag Goldman Sachs as Gold', () => {
  const [item] = parseFeed(rss().replace('Gold rises &amp; oil falls', 'Goldman sees stocks rising'), source, now);
  expect(item.categories).toEqual(['US Stocks']);
 });
+it('filters ZeroHedge headlines by asset and macro relevance', () => {
+ const zh = {...source,id:'zerohedge',name:'ZeroHedge'};
+ const [item] = parseFeed(rss(), zh, now);
+ expect(item.source).toBe('ZeroHedge');
+ expect(item.categories).toEqual(['Gold','Oil']);
+ expect(parseFeed(rss().replace('Gold rises &amp; oil falls','A celebrity wedding'),zh,now)).toEqual([]);
+});

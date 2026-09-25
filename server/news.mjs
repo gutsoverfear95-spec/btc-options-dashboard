@@ -2,6 +2,7 @@ import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 const gdeltQuery = '(oil OR gold OR inflation OR sanctions OR "Federal Reserve") sourcelang:english (domain:reuters.com OR domain:apnews.com OR domain:bbc.com OR domain:cnbc.com)';
 export const SOURCES = [
+  { id: 'zerohedge', name: 'ZeroHedge', url: 'https://feeds.feedburner.com/zerohedge/feed', ttl: 60000 },
   { id: 'bloomberg', name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss', ttl: 60000 },
   { id: 'cnbc', name: 'CNBC Markets', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', ttl: 60000 },
   { id: 'fed', name: 'Federal Reserve', url: 'https://www.federalreserve.gov/feeds/press_monetary.xml', ttl: 60000, category: 'Macro' },
@@ -61,7 +62,7 @@ export function parseFeed(body, source, now = Date.now()) {
     const date = Date.parse(plain(entry.pubDate || entry['dc:date']));
     if (!title || !url || !Number.isFinite(date) || date > now + 300000 || now - date > 45 * 86400000) return [];
     const tags = categories(title, source);
-    if (['cnbc', 'bloomberg'].includes(source.id) && tags.every(tag => tag === 'Markets')) return [];
+    if (['cnbc', 'bloomberg', 'zerohedge'].includes(source.id) && tags.every(tag => tag === 'Markets')) return [];
     return [{ id: url, url, title, source: source.name, sourceId: source.id,
       publisher: source.id === 'gdelt' ? plain(entry.publisher) : source.name,
       publishedAt: new Date(date).toISOString(), dateKind: source.id === 'gdelt' ? 'discovered' : 'published',
