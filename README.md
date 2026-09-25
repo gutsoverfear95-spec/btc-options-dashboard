@@ -64,7 +64,7 @@ an impact prediction. News sources are unchanged by this UI update.
 
 ### Live macro news
 
-`/api/news` aggregates CNBC Markets, Federal Reserve monetary releases, BLS CPI
+`/api/news` aggregates Bloomberg Markets, CNBC Markets, Federal Reserve monetary releases, BLS CPI
 and Employment (Atom), BEA, and EIA Today in Energy. These sources replace the
 obsolete WSJ/rss2json feed. Headlines link to the original publisher; full articles
 are not republished. The old demonstration economic calendar has been removed.

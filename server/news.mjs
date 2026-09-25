@@ -2,6 +2,7 @@ import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 const gdeltQuery = '(oil OR gold OR inflation OR sanctions OR "Federal Reserve") sourcelang:english (domain:reuters.com OR domain:apnews.com OR domain:bbc.com OR domain:cnbc.com)';
 export const SOURCES = [
+  { id: 'bloomberg', name: 'Bloomberg Markets', url: 'https://feeds.bloomberg.com/markets/news.rss', ttl: 60000 },
   { id: 'cnbc', name: 'CNBC Markets', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', ttl: 60000 },
   { id: 'fed', name: 'Federal Reserve', url: 'https://www.federalreserve.gov/feeds/press_monetary.xml', ttl: 60000, category: 'Macro' },
   { id: 'bls-cpi', name: 'BLS CPI', url: 'https://www.bls.gov/feed/cpi.rss', ttl: 60000, category: 'Macro' },
