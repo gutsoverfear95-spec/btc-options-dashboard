@@ -92,3 +92,8 @@ Vercel uses `api/news.js`; Netlify uses `netlify/functions/news.mjs` and its rew
 The Vite dev middleware exposes the same route locally. `npm test` covers RSS/Atom
 parsing, deduplication, stale fallback, source failures, polling, visibility and
 reading-position queues, as well as the existing sentiment and widget behavior.
+
+ZeroHedge headlines are also read from its FeedBurner RSS endpoint and filtered
+through the same asset/macro topic rules. Cards identify ZeroHedge as a source of
+news and commentary, separately from government releases. Only the headline,
+publication time and original link are displayed. First Squawk is not integrated.
