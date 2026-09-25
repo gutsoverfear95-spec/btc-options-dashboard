@@ -13,6 +13,11 @@ export const SOURCES = [
 ];
 const parser = new XMLParser({ ignoreAttributes: false, parseTagValue: false, processEntities: true });
 const plain = value => String(typeof value === 'object' ? value?.['#text'] ?? '' : value ?? '')
+  .replace(/&#(x[\da-f]+|\d+);/gi, (match, code) => {
+    const point = code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code);
+    return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : match;
+  })
+  .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
   .replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/\s+/g, ' ').trim();
 export function safeUrl(value) {
   try {
@@ -25,10 +30,10 @@ export function safeUrl(value) {
 }
 function categories(title, source) {
   const result = new Set(source.category ? [source.category] : []);
-  if (/nasdaq|s&p|stocks?|equities|wall street|earnings|nvidia|microsoft|apple|meta\b|ai\b|tech\b/i.test(title)) result.add('US Stocks');
+  if (/nasdaq|s&p|stocks?|equities|wall street|earnings|nvidia|microsoft|apple|meta\b|\bai\b|tech\b|\bshares?\b|small caps|tesla|oracle|amazon/i.test(title)) result.add('US Stocks');
   if (/gold|bullion|xau/i.test(title)) result.add('Gold');
   if (/\boil\b|crude|opec|petroleum|brent|\bwti\b|energy/i.test(title)) result.add('Oil');
-  if (/fed\b|inflation|cpi|pce|payroll|employment|gdp|\brates?\b|treasur|yields?|dollar|tariff|econom|central bank/i.test(title)) result.add('Macro');
+  if (/fed\b|inflation|cpi|pce|payroll|employment|gdp|\brates?\b|treasur|yields?|dollar|tariff|econom|central bank|\bbonds?\b|sanctions?|\bwar\b|trade deal|trade talks/i.test(title)) result.add('Macro');
   return result.size ? [...result] : ['Markets'];
 }
 export function parseFeed(body, source, now = Date.now()) {
@@ -55,10 +60,12 @@ export function parseFeed(body, source, now = Date.now()) {
     const url = safeUrl(entry.link);
     const date = Date.parse(plain(entry.pubDate || entry['dc:date']));
     if (!title || !url || !Number.isFinite(date) || date > now + 300000 || now - date > 45 * 86400000) return [];
+    const tags = categories(title, source);
+    if (['cnbc', 'bloomberg'].includes(source.id) && tags.every(tag => tag === 'Markets')) return [];
     return [{ id: url, url, title, source: source.name, sourceId: source.id,
       publisher: source.id === 'gdelt' ? plain(entry.publisher) : source.name,
       publishedAt: new Date(date).toISOString(), dateKind: source.id === 'gdelt' ? 'discovered' : 'published',
-      categories: categories(title, source),
+      categories: tags,
     }];
   });
 }

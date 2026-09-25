@@ -48,3 +48,8 @@ it('isolates failed sources and deduplicates links', async () => {
   expect(result.items).toHaveLength(1);
   expect(result.sources.find(s=>s.id==='broken').status).toBe('error');
 });
+it('filters general-interest stories and decodes numeric headline entities', () => {
+ const xml = rss().replace('Gold rises &amp; oil falls', 'Pandas arrive at the zoo');
+ expect(parseFeed(xml, {...source,id:'cnbc'}, now)).toEqual([]);
+ expect(parseFeed(rss().replace('Gold rises &amp; oil falls', 'Fed&#39;s rate decision'), source, now)[0].title).toBe("Fed's rate decision");
+});
